@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class Notes Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1f2a44; --muted:#5b6478; --line:#d5dae4; --accent:#4472C4; --accent-dark:#2f5597;
+    --desk:#e6eaf1; --panel:#ffffff; --danger:#b3261e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--desk);font-size:15px}
+  .app{display:grid;grid-template-columns:minmax(340px,430px) 1fr;height:100vh}
+  .side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:18px 18px 40px}
+  .main{overflow:auto;padding:22px 16px 60px}
+  h1{font-size:19px;margin:0 0 2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  h2{font-size:13px;margin:22px 0 8px;color:var(--muted);font-weight:600}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  select,input[type=text],textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  textarea{min-height:130px;resize:vertical;font-family:"Caveat",cursive;font-size:20px;line-height:1.3}
+  input[type=text].caveat{font-family:"Caveat",cursive;font-size:20px}
+  select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .row{display:flex;gap:8px;align-items:center}
+  .check{display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;margin-top:10px}
+  .check input{margin-top:2px}
+  button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px}
+  button:hover{background:#f3f5f9}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:hover{background:var(--accent-dark)}
+  button.small{padding:3px 8px;font-size:12px}
+  button.danger{color:var(--danger)}
+  .actions{display:flex;gap:8px;margin-top:14px}
+  .actions .primary{flex:1}
+  .thumb{margin-top:8px;max-width:100%;max-height:120px;border:1px solid var(--line);border-radius:4px;display:none}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  #list{list-style:none;margin:0;padding:0}
+  #list li{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:6px;background:#fafbfd}
+  #list li.editing{border-color:var(--accent);background:#eef3fb}
+  .tag{font-size:11px;color:var(--accent-dark);font-weight:700}
+  .txt{font-size:13px;margin:2px 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .empty{color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:6px;padding:12px}
+  details{margin-top:6px}
+  summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+  .dl{position:sticky;bottom:0;background:var(--panel);padding-top:14px;margin-top:18px;border-top:1px solid var(--line)}
+  .dl button{width:100%;padding:11px;font-size:15px}
+  #status{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+  #status.err{color:var(--danger)}
+
+  /* ---------- A4 preview ---------- */
+  .pages{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .pwrap{position:relative}
+  .page{position:absolute;left:0;top:0;width:794px;height:1123px;background:#fff;transform-origin:top left;
+        box-shadow:0 1px 3px rgba(31,42,68,.25),0 8px 24px rgba(31,42,68,.12);font-family:"Caveat",cursive;color:#000;overflow:hidden}
+  .phdr{position:absolute;top:47px;left:96px;right:96px;text-align:right;font-style:italic;color:#595959;font-size:11pt;
+        border-bottom:1px solid #4472C4;padding-bottom:8px;line-height:1.3}
+  .pftr{position:absolute;bottom:47px;left:96px;right:96px;display:flex;justify-content:space-between;color:#595959;font-size:11pt}
+  .pbody{position:absolute;top:96px;left:96px;width:602px;height:931px;overflow:hidden}
+  .blk{line-height:1.85;margin:0;white-space:pre-line;word-wrap:break-word}
+  .blk.center{text-align:center}.blk.left{text-align:left}.blk.just{text-align:justify}
+  .blk.fig{text-align:center;white-space:normal}
+  .blk a{color:#0563C1;text-decoration:underline;overflow-wrap:anywhere}
+  .blk.fig img{display:block;margin:0 auto}
+  .blk.fig .cap{font-weight:700;font-size:12pt;text-align:center}
+  .measurer{position:absolute;left:-99999px;top:0;width:602px;visibility:hidden;font-family:"Caveat",cursive}
+  .ph{color:#9aa3b5;font-family:system-ui,sans-serif;font-size:13px;text-align:center;margin-top:80px;line-height:1.5;white-space:normal}
+
+  .modal{position:fixed;inset:0;background:rgba(31,42,68,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal.open{display:flex}
+  .modal .box{background:#fff;border-radius:10px;padding:20px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .modal p{margin:0 0 16px;font-size:15px;line-height:1.4}
+  .modal .actions{justify-content:flex-end;margin-top:0}
+  .modal .actions button{flex:0 0 auto}
+  button.warn{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600}
+  button.warn:hover{background:#8f1d17}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr;height:auto}
+    .side{border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+    .main{overflow:visible}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <h1>Class Notes Builder</h1>
+    <p class="sub">Add content one item at a time. The A4 preview updates as you go.</p>
+
+    <h2 style="margin-top:6px">Continue earlier notes</h2>
+    <div class="row">
+      <button id="importBtn">Import notes (.docx)</button>
+      <button id="saveJsonBtn" class="small" title="Save a small backup file you can import later">Save backup (.json)</button>
+    </div>
+    <input type="file" id="importFile" accept=".docx,.json" style="display:none">
+    <div class="hint">Choose a Word file downloaded from this tool (or a .json backup) to carry on where you left off.</div>
+
+    <details>
+      <summary>Header and footer</summary>
+      <label for="setAuthor">Header text (top right)</label>
+      <input type="text" id="setAuthor" value="Chitharanjan M">
+      <label for="setFooter">Footer text (left)</label>
+      <input type="text" id="setFooter" value="Department of Civil Engineering, SJEC, Mangaluru.">
+    </details>
+
+    <h2>Add content</h2>
+    <label for="type">Content type</label>
+    <select id="type">
+      <option value="modnum">Module Number (12 pt)</option>
+      <option value="modname">Module Name (18 pt)</option>
+      <option value="main">Main Subheading (16 pt)</option>
+      <option value="sub">Subheading (14 pt)</option>
+      <option value="body" selected>Body (14 pt)</option>
+      <option value="fig">Figure (12 pt)</option>
+      <option value="link">Hyperlink (14 pt)</option>
+    </select>
+
+    <div id="fields"></div>
+
+    <div class="actions">
+      <button class="primary" id="addBtn">Add to notes</button>
+      <button id="cancelBtn" style="display:none">Cancel edit</button>
+    </div>
+
+    <h2>Your notes (<span id="count">0</span>)</h2>
+    <ul id="list"></ul>
+
+    <div class="dl">
+      <button class="primary" id="dlBtn">Download as Word (.docx)</button>
+      <div id="status"></div>
+      <div class="hint">A4 portrait, 1-inch margins. The downloaded file can be imported here again to keep editing. Text is set in Caveat, so install the Caveat font on the computer where you open the Word file.</div>
+      <div class="actions" style="margin-top:10px"><button class="small danger" id="clearBtn">Clear all notes</button></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="pages" id="pages"></div>
+  </main>
+</div>
+<div class="measurer" id="measurer"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalMsg">
+  <div class="box">
+    <p id="modalMsg"></p>
+    <div class="actions"><button id="modalNo">Cancel</button><button id="modalYes" class="warn">Confirm</button></div>
+  </div>
+</div>
+
+<script>
+/* ================= configuration ================= */
+const TYPES = {
+  modnum:{label:'Module Number', pt:12, bold:true,  align:'center'},
+  modname:{label:'Module Name',   pt:18, bold:true,  align:'center'},
+  main:{label:'Main Subheading',  pt:16, bold:true,  align:'left'},
+  sub:{label:'Subheading',        pt:14, bold:true,  align:'left'},
+  body:{label:'Body',             pt:14, bold:false, align:'just'},
+  fig:{label:'Figure',            pt:12, bold:true,  align:'center'},
+  link:{label:'Hyperlink',        pt:14, bold:false, align:'left'}
+};
+const PAGE_W=794, PAGE_H=1123, CONTENT_W=602, CONTENT_H=931;   // CSS px at 96 dpi (A4, 1" margins)
+const MAX_IMG_W=600, MAX_IMG_H=520;
+const STORE_KEY='notes_builder_v1';
+
+/* ================= state ================= */
+let entries=[];
+let editingId=null;
+let pendingImage=null;      // {dataUrl,w,h} for the figure form
+let nextId=1;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ================= form ================= */
+function renderFields(preset){
+  const t=$('type').value, f=$('fields'); preset=preset||{};
+  const val=preset.text||'';
+  if(t==='body'){
+    f.innerHTML=`<label for="inText">Body text</label><textarea id="inText" placeholder="Type the explanation here">${esc(val)}</textarea>`;
+  }else if(t==='fig'){
+    f.innerHTML=`
+      <label for="inText">Figure name</label>
+      <input type="text" id="inText" class="caveat" placeholder="e.g., Stress-strain curve of mild steel" value="${esc(val)}">
+      <label for="inFile">Attach image</label>
+      <input type="file" id="inFile" accept="image/*">
+      <img class="thumb" id="thumb" alt="Selected figure">
+      <label for="inW">Figure width: <span id="wOut">${preset.widthPct||70}</span>%</label>
+      <input type="range" id="inW" min="20" max="100" value="${preset.widthPct||70}">
+      <div class="hint">The caption is numbered automatically (Fig 1, Fig 2, ...).</div>`;
+    pendingImage=preset.img||null;
+    if(pendingImage){const th=$('thumb');th.src=pendingImage.dataUrl;th.style.display='block';}
+    $('inFile').addEventListener('change',onFile);
+    $('inW').addEventListener('input',e=>{$('wOut').textContent=e.target.value;});
+  }else if(t==='link'){
+    f.innerHTML=`
+      <label for="inText">Name</label>
+      <input type="text" id="inText" class="caveat" placeholder="e.g., IS 456:2000 (BIS)" value="${esc(val)}">
+      <label for="inUrl">Hyperlink</label>
+      <input type="text" id="inUrl" placeholder="https://example.com/page" value="${esc(preset.url||'')}" autocomplete="off" spellcheck="false">
+      <div class="hint">Appears in the notes as "Name: link". The link is clickable in Word.</div>`;
+  }else{
+    const ph={modnum:'e.g., MODULE 4',modname:'e.g., BENDING STRESSES IN BEAMS',main:'e.g., Flexure formula',sub:'e.g., Neutral axis'}[t];
+    let extra='';
+    if(t==='sub'){
+      extra=`<label class="check"><input type="checkbox" id="inJoin" ${preset.join?'checked':''}>
+        <span>Continue with the next Body text on the same line, as in the template (Subheading: body text).</span></label>`;
+    }
+    f.innerHTML=`<label for="inText">${TYPES[t].label}</label>
+      <input type="text" id="inText" class="caveat" placeholder="${ph}" value="${esc(val)}">${extra}`;
+  }
+  const first=$('inText'); if(first) first.focus();
+}
+
+function onFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let dataUrl=reader.result;
+      if(!/^data:image\/(png|jpeg|jpg|gif|bmp)/i.test(dataUrl)){   // convert webp/svg/etc. to PNG
+        const c=document.createElement('canvas'); c.width=img.naturalWidth||800; c.height=img.naturalHeight||600;
+        c.getContext('2d').drawImage(img,0,0); dataUrl=c.toDataURL('image/png');
+      }
+      pendingImage={dataUrl,w:img.naturalWidth||800,h:img.naturalHeight||600};
+      const th=$('thumb'); th.src=dataUrl; th.style.display='block';
+      setStatus('');
+    };
+    img.onerror=()=>setStatus('That file could not be read as an image. Try a PNG or JPG.',true);
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function addOrUpdate(){
+  const t=$('type').value;
+  const text=($('inText').value||'').trim();
+  if(t==='fig'){
+    if(!pendingImage){setStatus('Attach an image for the figure first.',true);return;}
+    if(!text){setStatus('Enter a figure name.',true);$('inText').focus();return;}
+  }else if(!text){setStatus('Enter some text first.',true);$('inText').focus();return;}
+  let url='';
+  if(t==='link'){
+    url=normUrl($('inUrl').value);
+    if(!url){setStatus('Enter a valid web address, for example https://example.com',true);$('inUrl').focus();return;}
+  }
+  const entry={id:editingId||nextId++,type:t,text};
+  if(t==='link') entry.url=url;
+  if(t==='sub') entry.join=$('inJoin').checked;
+  if(t==='fig'){entry.img=pendingImage;entry.widthPct=+$('inW').value;}
+  if(editingId){
+    const i=entries.findIndex(e=>e.id===editingId); entries[i]=entry; endEdit();
+  }else entries.push(entry);
+  setStatus('');
+  renderFields(); save(); renderAll();
+  if(!editingId && t==='modnum') $('type').value='modname', renderFields();   // convenient flow
+}
+
+function startEdit(id){
+  const e=entries.find(x=>x.id===id); if(!e) return;
+  editingId=id; $('type').value=e.type; $('type').disabled=true;
+  renderFields(e); $('addBtn').textContent='Update item'; $('cancelBtn').style.display='';
+  renderList();
+}
+function endEdit(){
+  editingId=null; $('type').disabled=false; $('addBtn').textContent='Add to notes'; $('cancelBtn').style.display='none';
+}
+
+function normUrl(u){
+  if(typeof u!=='string') return '';
+  u=u.trim(); if(!u) return '';
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(u)) u='https://'+u;
+  try{
+    const x=new URL(u);
+    if(!/^https?:$/.test(x.protocol)) return '';
+    if(!x.hostname.includes('.') && x.hostname!=='localhost') return '';
+    return u;
+  }catch(e){return '';}
+}
+
+/* ================= list ================= */
+function renderList(){
+  $('count').textContent=entries.length;
+  const ul=$('list');
+  if(!entries.length){ul.innerHTML='<li class="empty">Nothing added yet. Pick a content type above and add your first item.</li>';return;}
+  ul.innerHTML=entries.map((e,i)=>{
+    const label=TYPES[e.type].label+' · '+TYPES[e.type].pt+' pt';
+    const preview=e.type==='fig'?('Figure: '+e.text):e.type==='link'?(e.text+': '+e.url):e.text.replace(/\s+/g,' ');
+    return `<li class="${e.id===editingId?'editing':''}">
+      <div class="tag">${label}</div>
+      <div class="txt">${esc(preview)}</div>
+      <div class="row">
+        <button class="small" data-a="up" data-id="${e.id}" ${i===0?'disabled':''} aria-label="Move up">Up</button>
+        <button class="small" data-a="down" data-id="${e.id}" ${i===entries.length-1?'disabled':''} aria-label="Move down">Down</button>
+        <button class="small" data-a="edit" data-id="${e.id}">Edit</button>
+        <button class="small danger" data-a="del" data-id="${e.id}">Delete</button>
+      </div></li>`;
+  }).join('');
+}
+$('list').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  const id=+b.dataset.id, i=entries.findIndex(e=>e.id===id);
+  if(b.dataset.a==='edit') return startEdit(id);
+  if(b.dataset.a==='del'){ if(editingId===id) endEdit(), renderFields(); entries.splice(i,1); }
+  if(b.dataset.a==='up' && i>0) [entries[i-1],entries[i]]=[entries[i],entries[i-1]];
+  if(b.dataset.a==='down' && i<entries.length-1) [entries[i+1],entries[i]]=[entries[i],entries[i+1]];
+  save(); renderAll();
+});
+
+/* ================= blocks (shared by preview and Word export) ================= */
+function buildBlocks(){
+  const blocks=[]; let figNo=0;
+  for(let i=0;i<entries.length;i++){
+    const e=entries[i], T=TYPES[e.type];
+    if(e.type==='sub' && e.join && entries[i+1] && entries[i+1].type==='body'){
+      const prefix=e.text.replace(/\s*:?\s*$/,'')+': ';
+      blocks.push({kind:'text',pt:14,align:'just',prefix,text:entries[i+1].text}); i++;
+    }else if(e.type==='body'){
+      blocks.push({kind:'text',pt:14,align:'just',prefix:'',text:e.text});
+    }else if(e.type==='link'){
+      blocks.push({kind:'link',pt:14,align:'left',name:e.text,url:e.url});
+    }else if(e.type==='fig'){
+      figNo++;
+      let w=MAX_IMG_W*(e.widthPct/100), h=w*e.img.h/e.img.w;
+      if(h>MAX_IMG_H){h=MAX_IMG_H; w=h*e.img.w/e.img.h;}
+      blocks.push({kind:'fig',img:e.img,w:Math.round(w),h:Math.round(h),caption:`Fig ${figNo}: ${e.text}`});
+    }else{
+      blocks.push({kind:'head',pt:T.pt,align:T.align,text:e.text});
+    }
+  }
+  return blocks;
+}
+
+/* ================= preview with A4 pagination ================= */
+const meas=$('measurer');
+const measure=html=>{meas.innerHTML=html; return meas.firstElementChild.offsetHeight;};
+const headHtml=b=>`<div class="blk ${b.align}" style="font-size:${b.pt}pt;font-weight:700">${esc(b.text)}</div>`;
+const figHtml=b=>`<div class="blk fig"><img src="${b.img.dataUrl}" style="width:${b.w}px;height:${b.h}px" alt=""><div class="cap">${esc(b.caption)}</div></div>`;
+const linkHtml=b=>`<div class="blk left" style="font-size:${b.pt}pt"><b>${esc(b.name.replace(/\s*:?\s*$/,''))}: </b><a href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">${esc(b.url)}</a></div>`;
+const fragHtml=(b,words,first)=>`<div class="blk ${b.align}" style="font-size:${b.pt}pt">${first&&b.prefix?`<b>${esc(b.prefix)}</b>`:''}${esc(words.join(' '))}</div>`;
+
+function paginate(blocks){
+  const pages=[[]]; let used=0;
+  const newPage=()=>{pages.push([]);used=0;};
+  const place=(html,h)=>{pages[pages.length-1].push(html);used+=h;};
+  for(const b of blocks){
+    if(b.kind==='head'){
+      const html=headHtml(b), h=measure(html);
+      if(used>0 && used+h+60>CONTENT_H) newPage();       // keep headings with the text that follows
+      place(html,h);
+    }else if(b.kind==='link'){
+      const html=linkHtml(b), h=measure(html);
+      if(used>0 && used+h>CONTENT_H) newPage();
+      place(html,h);
+    }else if(b.kind==='fig'){
+      const html=figHtml(b), h=measure(html);
+      if(used>0 && used+h>CONTENT_H) newPage();
+      place(html,h);
+    }else{
+      let words=b.text.split(/ +/).filter(Boolean), first=true;
+      while(words.length){
+        const remaining=CONTENT_H-used;
+        const hAll=measure(fragHtml(b,words,first));
+        if(hAll<=remaining){place(fragHtml(b,words,first),hAll);break;}
+        let lo=0,hi=words.length-1;
+        while(lo<hi){
+          const mid=Math.ceil((lo+hi+1)/2);
+          if(measure(fragHtml(b,words.slice(0,mid),first))<=remaining) lo=mid; else hi=mid-1;
+        }
+        if(lo===0 || measure(fragHtml(b,words.slice(0,lo),first))>remaining){
+          if(used>0){newPage();continue;}
+          place(fragHtml(b,words,first),hAll);break;      // taller than a page: let it overflow
+        }
+        place(fragHtml(b,words.slice(0,lo),first),measure(fragHtml(b,words.slice(0,lo),first)));
+        words=words.slice(lo); first=false; newPage();
+      }
+    }
+  }
+  return pages;
+}
+
+function renderPreview(){
+  const host=$('pages');
+  const blocks=buildBlocks();
+  const pages=blocks.length?paginate(blocks):[[]];
+  const avail=Math.max(260,host.parentElement.clientWidth-32);
+  const s=Math.min(1,avail/PAGE_W);
+  const author=esc($('setAuthor').value), footer=esc($('setFooter').value);
+  host.innerHTML=pages.map((items,i)=>`
+    <div class="pwrap" style="width:${PAGE_W*s}px;height:${PAGE_H*s}px">
+      <div class="page" style="transform:scale(${s})">
+        <div class="phdr">${author||'&nbsp;'}</div>
+        <div class="pbody">${items.join('')||(blocks.length?'':'<div class="ph">Your A4 page appears here.<br>Add a Module Number to begin.</div>')}</div>
+        <div class="pftr"><span>${footer}</span><span>${i+1}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAll(){renderList();renderPreview();}
+
+/* ================= Word export ================= */
+function loadScript(urls){
+  return new Promise((res,rej)=>{
+    const tryNext=i=>{
+      if(window.docx) return res();
+      if(i>=urls.length) return rej(new Error('load'));
+      const s=document.createElement('script'); s.src=urls[i];
+      s.onload=()=>window.docx?res():tryNext(i+1); s.onerror=()=>tryNext(i+1);
+      document.head.appendChild(s);
+    };
+    tryNext(0);
+  });
+}
+function dataUrlToBytes(u){
+  const bin=atob(u.split(',')[1]); const a=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a;
+}
+const setStatus=(m,err)=>{const s=$('status');s.textContent=m;s.className=err?'err':'';};
+
+async function downloadDocx(){
+  if(!entries.length){setStatus('Add some content before downloading.',true);return;}
+  setStatus('Preparing the Word file...');
+  try{
+    await loadScript(['https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js','https://unpkg.com/docx@8.5.0/build/index.umd.js']);
+  }catch(e){
+    setStatus('The Word library could not be loaded. Check your internet connection and try again.',true);return;
+  }
+  try{
+    const D=window.docx, FONT='Caveat';
+    const AL={center:D.AlignmentType.CENTER,left:D.AlignmentType.LEFT,just:D.AlignmentType.JUSTIFIED};
+    const sp={after:0,line:360};
+    const runs=(text,pt,bold)=>text.split('\n').map((l,i)=>new D.TextRun({text:l,break:i?1:0,bold,size:pt*2,font:FONT}));
+    const children=[];
+    for(const b of buildBlocks()){
+      if(b.kind==='head'){
+        children.push(new D.Paragraph({alignment:AL[b.align],spacing:sp,children:runs(b.text,b.pt,true)}));
+      }else if(b.kind==='link'){
+        children.push(new D.Paragraph({alignment:AL.left,spacing:sp,children:[
+          new D.TextRun({text:b.name.replace(/\s*:?\s*$/,'')+': ',bold:true,size:b.pt*2,font:FONT}),
+          new D.ExternalHyperlink({link:b.url,children:[
+            new D.TextRun({text:b.url,color:'0563C1',underline:{},size:b.pt*2,font:FONT})
+          ]})
+        ]}));
+      }else if(b.kind==='text'){
+        const kids=[];
+        if(b.prefix) kids.push(new D.TextRun({text:b.prefix,bold:true,size:b.pt*2,font:FONT}));
+        kids.push(...runs(b.text,b.pt,false));
+        children.push(new D.Paragraph({alignment:AL.just,spacing:sp,children:kids}));
+      }else{
+        const m=b.img.dataUrl.match(/^data:image\/(\w+)/i)[1].toLowerCase();
+        const type=m==='jpeg'?'jpg':m;
+        children.push(new D.Paragraph({alignment:AL.center,spacing:{after:0,line:360},children:[
+          new D.ImageRun({data:dataUrlToBytes(b.img.dataUrl),transformation:{width:b.w,height:b.h},type})
+        ]}));
+        children.push(new D.Paragraph({alignment:AL.center,spacing:sp,children:runs(b.caption,12,true)}));
+      }
+    }
+    const header=new D.Header({children:[new D.Paragraph({
+      alignment:D.AlignmentType.RIGHT,
+      border:{bottom:{style:D.BorderStyle.SINGLE,size:4,space:8,color:'4472C4'}},
+      spacing:{after:360},
+      children:[new D.TextRun({text:$('setAuthor').value,italics:true,color:'595959',size:22,font:FONT})]
+    })]});
+    const footer=new D.Footer({children:[new D.Paragraph({
+      tabStops:[{type:D.TabStopType.RIGHT,position:9026}],
+      children:[
+        new D.TextRun({text:$('setFooter').value,color:'595959',size:22,font:FONT}),
+        new D.TextRun({children:['\t',D.PageNumber.CURRENT],color:'595959',size:22,font:FONT})
+      ]
+    })]});
+    const doc=new D.Document({
+      creator:$('setAuthor').value||'Notes Builder',
+      title:'Class notes',
+      styles:{default:{document:{run:{font:FONT,size:28}}}},
+      sections:[{
+        properties:{page:{
+          size:{width:11906,height:16838,orientation:D.PageOrientation.PORTRAIT},   // A4 portrait
+          margin:{top:1440,right:1440,bottom:1440,left:1440,header:708,footer:708}
+        }},
+        headers:{default:header}, footers:{default:footer}, children
+      }]
+    });
+    let blob=await D.Packer.toBlob(doc);
+    let embedded=true;
+    try{   // hide the editable notes inside the .docx so it can be re-imported later
+      const JSZ=await loadJSZip();
+      const zip=await JSZ.loadAsync(blob);
+      zip.file(DATA_FILE,projectData());
+      let ct=await zip.file('[Content_Types].xml').async('string');
+      if(!/Extension="json"/i.test(ct)) ct=ct.replace(/(<Types[^>]*>)/,'$1<Default Extension="json" ContentType="application/json"/>');
+      zip.file('[Content_Types].xml',ct);
+      blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+    }catch(e){ embedded=false; console.error(e); }
+    const fname=baseName();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname+'.docx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    setStatus(embedded?'Downloaded '+fname+'.docx':'Downloaded '+fname+'.docx (without re-import data; use Save backup if you need to continue later)',!embedded);
+  }catch(err){
+    console.error(err); setStatus('Could not build the Word file: '+err.message,true);
+  }
+}
+
+/* ================= in-page confirm (browser confirm() is blocked in some viewers) ================= */
+function askConfirm(msg,yesLabel){
+  return new Promise(res=>{
+    const m=$('modal'); $('modalMsg').textContent=msg; $('modalYes').textContent=yesLabel||'Confirm';
+    m.classList.add('open'); $('modalNo').focus();
+    const done=v=>{m.classList.remove('open');$('modalYes').onclick=$('modalNo').onclick=null;document.removeEventListener('keydown',esc);res(v);};
+    const esc=e=>{if(e.key==='Escape')done(false);};
+    document.addEventListener('keydown',esc);
+    $('modalYes').onclick=()=>done(true); $('modalNo').onclick=()=>done(false);
+  });
+}
+
+/* ================= import / project data ================= */
+const DATA_FILE='notes-builder-data.json';
+const JSZIP_URLS=['https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js','https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'];
+function loadJSZip(){
+  return new Promise((res,rej)=>{
+    const go=i=>{
+      if(window.JSZip) return res(window.JSZip);
+      if(i>=JSZIP_URLS.length) return rej(new Error('jszip'));
+      const s=document.createElement('script'); s.src=JSZIP_URLS[i];
+      s.onload=()=>window.JSZip?res(window.JSZip):go(i+1); s.onerror=()=>go(i+1);
+      document.head.appendChild(s);
+    };
+    go(0);
+  });
+}
+const projectData=()=>JSON.stringify({app:'notes-builder',version:1,entries,nextId,author:$('setAuthor').value,footer:$('setFooter').value});
+
+function applyProject(d){
+  if(!d || d.app!=='notes-builder' || !Array.isArray(d.entries)) throw new Error('bad');
+  const clean=[]; let id=1;
+  for(const e of d.entries){
+    if(!e || !TYPES[e.type] || typeof e.text!=='string') continue;
+    const o={id:id++,type:e.type,text:e.text};
+    if(e.type==='sub') o.join=!!e.join;
+    if(e.type==='link'){ const u=normUrl(e.url); if(!u) continue; o.url=u; }
+    if(e.type==='fig'){
+      if(!e.img || typeof e.img.dataUrl!=='string' || !/^data:image\/(png|jpeg|jpg|gif|bmp);base64,/i.test(e.img.dataUrl)) continue;
+      o.img={dataUrl:e.img.dataUrl,w:+e.img.w||800,h:+e.img.h||600};
+      o.widthPct=Math.min(100,Math.max(20,+e.widthPct||70));
+    }
+    clean.push(o);
+  }
+  entries=clean; nextId=id;
+  if(typeof d.author==='string') $('setAuthor').value=d.author;
+  if(typeof d.footer==='string') $('setFooter').value=d.footer;
+  endEdit(); renderFields(); save(); renderAll();
+  return clean.length;
+}
+
+async function importNotes(file){
+  if(!file) return;
+  if(entries.length && !(await askConfirm('Importing will replace the notes you have open now. Continue?','Replace and import'))) return;
+  setStatus('Reading '+file.name+'...');
+  try{
+    let data;
+    if(/\.json$/i.test(file.name)){
+      data=JSON.parse(await file.text());
+    }else{
+      let JSZ;
+      try{ JSZ=await loadJSZip(); }
+      catch(e){ setStatus('The file reader library could not be loaded. Check your internet connection and try again.',true); return; }
+      const zip=await JSZ.loadAsync(await file.arrayBuffer());
+      const f=zip.file(DATA_FILE);
+      if(!f){ setStatus('This Word file has no editable notes data. Import the .docx originally downloaded from this tool (files re-saved in Word lose it), or use a .json backup.',true); return; }
+      data=JSON.parse(await f.async('string'));
+    }
+    const n=applyProject(data);
+    setStatus('Imported '+n+' item'+(n===1?'':'s')+'. Keep adding below.');
+  }catch(err){
+    console.error(err);
+    setStatus('That file could not be imported. Choose a .docx downloaded from this tool or a .json backup.',true);
+  }
+}
+function saveJson(){
+  if(!entries.length){setStatus('Add some content before saving a backup.',true);return;}
+  const blob=new Blob([projectData()],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=baseName()+'_backup.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  setStatus('Saved '+baseName()+'_backup.json');
+}
+function baseName(){
+  const t=(entries.find(e=>e.type==='modname')||entries.find(e=>e.type==='modnum')||{text:'Class_Notes'}).text;
+  return t.replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60)||'Class_Notes';
+}
+
+/* ================= persistence ================= */
+function save(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify({entries,nextId,author:$('setAuthor').value,footer:$('setFooter').value}));}catch(e){}
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); if(!d) return;
+    entries=d.entries||[]; nextId=d.nextId||entries.length+1;
+    if(d.author!=null) $('setAuthor').value=d.author;
+    if(d.footer!=null) $('setFooter').value=d.footer;
+  }catch(e){}
+}
+
+/* ================= wiring ================= */
+$('type').addEventListener('change',()=>renderFields());
+$('addBtn').addEventListener('click',addOrUpdate);
+$('cancelBtn').addEventListener('click',()=>{endEdit();renderFields();renderList();});
+$('dlBtn').addEventListener('click',downloadDocx);
+$('importBtn').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change',e=>{const f=e.target.files[0]; e.target.value=''; importNotes(f);});
+$('saveJsonBtn').addEventListener('click',saveJson);
+$('clearBtn').addEventListener('click',async()=>{
+  if(!entries.length){setStatus('There are no notes to clear.');return;}
+  if(await askConfirm('Remove every item from these notes? This cannot be undone.','Clear all notes')){
+    entries=[];nextId=1;endEdit();renderFields();save();renderAll();setStatus('All notes cleared.');
+  }
+});
+['setAuthor','setFooter'].forEach(id=>$(id).addEventListener('input',()=>{save();renderPreview();}));
+$('fields').addEventListener('keydown',e=>{
+  if(e.key==='Enter' && e.target.tagName==='INPUT' && e.target.type==='text'){e.preventDefault();addOrUpdate();}
+});
+let rz; window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderPreview,120);});
+
+load(); renderFields(); renderAll();
+if(document.fonts){ document.fonts.load('700 14pt Caveat').then(()=>document.fonts.load('14pt Caveat')).then(renderPreview); }
+</script>
+</body>
+</html>
